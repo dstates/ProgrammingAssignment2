@@ -12,56 +12,6 @@ Programming Assignment you will take advantage of the scoping rules of
 the R language and how they can be manipulated to preserve state inside
 of an R object.
 
-### Example: Caching the Mean of a Vector
-
-In this example we introduce the `<<-` operator which can be used to
-assign a value to an object in an environment that is different from the
-current environment. Below are two functions that are used to create a
-special object that stores a numeric vector and caches its mean.
-
-The first function, `makeVector` creates a special "vector", which is
-really a list containing a function to
-
-1.  set the value of the vector
-2.  get the value of the vector
-3.  set the value of the mean
-4.  get the value of the mean
-
-<!-- -->
-
-    makeVector <- function(x = numeric()) {
-            m <- NULL
-            set <- function(y) {
-                    x <<- y
-                    m <<- NULL
-            }
-            get <- function() x
-            setmean <- function(mean) m <<- mean
-            getmean <- function() m
-            list(set = set, get = get,
-                 setmean = setmean,
-                 getmean = getmean)
-    }
-
-The following function calculates the mean of the special "vector"
-created with the above function. However, it first checks to see if the
-mean has already been calculated. If so, it `get`s the mean from the
-cache and skips the computation. Otherwise, it calculates the mean of
-the data and sets the value of the mean in the cache via the `setmean`
-function.
-
-    cachemean <- function(x, ...) {
-            m <- x$getmean()
-            if(!is.null(m)) {
-                    message("getting cached data")
-                    return(m)
-            }
-            data <- x$get()
-            m <- mean(data, ...)
-            x$setmean(m)
-            m
-    }
-
 ### Assignment: Caching the Inverse of a Matrix
 
 Matrix inversion is usually a costly computation and there may be some
@@ -100,6 +50,83 @@ In order to complete this assignment, you must do the following:
 5.  Submit to Coursera the URL to your GitHub repository that contains
     the completed R code for the assignment.
 
-### Grading
+### Proof of Functionality
 
-This assignment will be graded via peer assessment.
+Create two square matrices
+
+    > m2 <- matrix(rnorm(25), 5,5)
+    > m1 <- matrix(rnorm(16), 4,4)
+    > m1
+                [,1]       [,2]       [,3]         [,4]
+    [1,]  0.35296429  0.4951894  1.6478337  0.470410432
+    [2,]  1.65624383 -1.4734089 -1.3614005  1.806187078
+    [3,]  0.49288832 -0.5888183 -0.9051822  0.006974947
+    [4,] -0.07693787 -0.7104939  1.2078814 -0.288907773
+    > m2
+              [,1]       [,2]       [,3]       [,4]       [,5]
+    [1,] -2.106430  1.3032257  2.3170130 -1.0310386 -0.5791869
+    [2,] -1.624708  0.3678403 -0.8085702 -0.6831729  0.6829674
+    [3,] -1.790866  0.9449002 -1.0061056 -0.9136711 -1.4457784
+    [4,]  1.326839  0.9978362 -1.1024430  1.1553087 -0.1592660
+    [5,]  1.178373 -0.2982530 -1.2433936  0.1127043  0.4820656
+
+Store `m1` in a chache object `c` and confirm is has our matrix in it, confirm that there is **no** cached inverted matrix
+
+    > c <- makeCacheMatrix(m1)
+    > c$get()
+                [,1]       [,2]       [,3]         [,4]
+    [1,]  0.35296429  0.4951894  1.6478337  0.470410432
+    [2,]  1.65624383 -1.4734089 -1.3614005  1.806187078
+    [3,]  0.49288832 -0.5888183 -0.9051822  0.006974947
+    [4,] -0.07693787 -0.7104939  1.2078814 -0.288907773
+    > c$getSolved()
+    NULL
+
+solve the matrix with cacheSolve(), and check it a second time to make sure it was cached
+
+    > cacheSolve(c)
+               [,1]        [,2]        [,3]        [,4]
+    [1,]  1.2293736 -0.38121042  2.37886941 -0.32409888
+    [2,]  0.5599944 -0.27171320  0.39065551 -0.77745525
+    [3,]  0.3017277 -0.02572502 -0.07834034  0.32856587
+    [4,] -0.4430712  0.66217432 -1.92175279 -0.08936669
+    > cacheSolve(c)
+    Using cached value...
+               [,1]        [,2]        [,3]        [,4]
+    [1,]  1.2293736 -0.38121042  2.37886941 -0.32409888
+    [2,]  0.5599944 -0.27171320  0.39065551 -0.77745525
+    [3,]  0.3017277 -0.02572502 -0.07834034  0.32856587
+    [4,] -0.4430712  0.66217432 -1.92175279 -0.08936669
+
+change the matrix stored in `c` to `m2`, confirm the matrix is stored, confirm the cached inverted matrix was **cleared**
+
+    > c$set(m2)
+    > c$get()
+              [,1]       [,2]       [,3]       [,4]       [,5]
+    [1,] -2.106430  1.3032257  2.3170130 -1.0310386 -0.5791869
+    [2,] -1.624708  0.3678403 -0.8085702 -0.6831729  0.6829674
+    [3,] -1.790866  0.9449002 -1.0061056 -0.9136711 -1.4457784
+    [4,]  1.326839  0.9978362 -1.1024430  1.1553087 -0.1592660
+    [5,]  1.178373 -0.2982530 -1.2433936  0.1127043  0.4820656
+    > c$getSolved()
+    NULL
+
+solve the matrix with cacheSolve(), and check it a second time to make sure it was cached
+
+    > cacheSolve(c)
+               [,1]       [,2]        [,3]        [,4]       [,5]
+    [1,]  0.3504246 -0.3941997 -0.01168911 -0.02107161  0.9374886
+    [2,]  0.5287512  0.1115834 -0.03269304  0.46018601  0.5311788
+    [3,]  0.2117485 -0.1755827 -0.19135820 -0.05743851 -0.0897188
+    [4,] -0.6343257  0.2603355 -0.20134221  0.44895551 -1.5864783
+    [5,]  0.1650166  0.5188814 -0.43815216  0.08310941  0.2509242
+    > cacheSolve(c)
+    Using cached value...
+               [,1]       [,2]        [,3]        [,4]       [,5]
+    [1,]  0.3504246 -0.3941997 -0.01168911 -0.02107161  0.9374886
+    [2,]  0.5287512  0.1115834 -0.03269304  0.46018601  0.5311788
+    [3,]  0.2117485 -0.1755827 -0.19135820 -0.05743851 -0.0897188
+    [4,] -0.6343257  0.2603355 -0.20134221  0.44895551 -1.5864783
+    [5,]  0.1650166  0.5188814 -0.43815216  0.08310941  0.2509242
+
+Looks perfect to me ;)
